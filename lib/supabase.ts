@@ -9,6 +9,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 const supabaseUrl = SUPABASE_URL;
 const supabaseAnonKey = SUPABASE_ANON_KEY;
 
+// Temporary debug logging
+console.log('Supabase Config:', {
+  url: supabaseUrl,
+  keyLength: supabaseAnonKey?.length
+});
+
 // Create client with AsyncStorage for persistence
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -27,6 +33,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 });
+
+// Test the connection immediately
+supabase.auth.getSession().then(
+  ({ data, error }) => {
+    if (error) {
+      console.error('Supabase auth error:', error);
+    } else {
+      console.log('Supabase connection successful');
+    }
+  }
+);
 
 // Function to test connection
 export const testSupabaseConnection = async () => {

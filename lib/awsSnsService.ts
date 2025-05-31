@@ -4,7 +4,7 @@ import * as crypto from 'crypto-browserify';
 import { AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY } from '@env';
 
 // AWS SNS API endpoint
-const SNS_ENDPOINT = `https://sns.${AWS_REGION}.amazonaws.com`;
+const SNS_ENDPOINT = `https://sns.${AWS_REGION.replace(/['"]/g, '')}.amazonaws.com`;
 
 /**
  * Sign AWS API request
@@ -51,6 +51,15 @@ function signRequest(method: string, url: string, body: string, date: Date): str
 export async function sendSMS(phoneNumber: string, message: string): Promise<boolean> {
   try {
     // Check if we have valid AWS credentials
+    if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY || !AWS_REGION) {
+      console.error('[AWS SNS] Missing AWS credentials:', {
+        hasAccessKey: !!AWS_ACCESS_KEY_ID,
+        hasSecretKey: !!AWS_SECRET_ACCESS_KEY,
+        hasRegion: !!AWS_REGION
+      });
+      return false;
+    }
+
     if (AWS_ACCESS_KEY_ID.includes('YOUR_') || 
         AWS_SECRET_ACCESS_KEY.includes('YOUR_')) {
       console.log('[AWS SNS] Using development mode (no SMS sent)');
@@ -72,15 +81,30 @@ export async function sendSMS(phoneNumber: string, message: string): Promise<boo
     // Sign request
     const authorization = signRequest('POST', '/', body, date);
     
-    // Send request
+    console.log('[AWS SNS] Sending request to:', SNS_ENDPOINT);
+    console.log('[AWS SNS] Request headers:', {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Amz-Date': dateString,
+      'Authorization': authorization.substring(0, 50) + '...' // Log partial auth for security
+    });
+    
+    // Send request with more permissive configuration
     const response = await fetch(SNS_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'X-Amz-Date': dateString,
         'Authorization': authorization,
+        'Accept': '*/*',
+        'Connection': 'keep-alive'
       },
       body,
+      // Add these options to handle SSL issues
+      mode: 'cors',
+      cache: 'no-cache',
+      credentials: 'omit',
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer'
     });
     
     if (!response.ok) {
@@ -94,6 +118,12 @@ export async function sendSMS(phoneNumber: string, message: string): Promise<boo
     return true;
   } catch (error) {
     console.error('[AWS SNS] Error sending SMS:', error);
+    if (error instanceof Error) {
+      console.error('[AWS SNS] Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
     return false;
   }
 } 

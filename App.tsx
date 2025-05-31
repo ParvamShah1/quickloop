@@ -234,7 +234,7 @@ export default function App() {
     if (!user) {
       return (
         <PhoneLoginScreen
-          onUserCreated={handleUserCreated}
+          onUserCreated={handleUserCreated} 
         />
       );
     }

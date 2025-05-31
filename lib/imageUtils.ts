@@ -283,12 +283,12 @@ export const downloadImage = async (imageUrl: string): Promise<{ success: boolea
     if (fileUri === imageUrl) {
       const filename = imageUrl.split('/').pop() || `download-${Date.now()}.jpg`;
       const tempFilePath = `${FileSystem.cacheDirectory}${filename}`;
-      
+    
       const downloadResult = await FileSystem.downloadAsync(imageUrl, tempFilePath);
-      
+    
       if (downloadResult.status !== 200) {
         console.log('Error downloading image:', downloadResult);
-        return { success: false };
+      return { success: false };
       }
       
       fileUri = tempFilePath;
@@ -302,9 +302,9 @@ export const downloadImage = async (imageUrl: string): Promise<{ success: boolea
       const album = await MediaLibrary.getAlbumAsync('QuickLoop');
       if (album === null) {
         await MediaLibrary.createAlbumAsync('QuickLoop', asset, false);
-      } else {
+    } else {
         await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-      }
+    }
     }
     
     return { success: true };
@@ -334,7 +334,7 @@ export const downloadMultipleImages = async (
       try {
         // First check if we have a cached version
         let fileUri = await getCachedImageUri(image.image_url);
-        
+          
         // If we're using the original URL, download it to a temporary file first
         if (fileUri === image.image_url) {
           const filename = image.image_url.split('/').pop() || `download-${Date.now()}-${successCount}.jpg`;
@@ -350,9 +350,9 @@ export const downloadMultipleImages = async (
           fileUri = tempFilePath;
         }
         
-        // Save to media library
-        const asset = await MediaLibrary.createAssetAsync(fileUri);
-        
+          // Save to media library
+          const asset = await MediaLibrary.createAssetAsync(fileUri);
+          
         // Create album if on Android
         if (Platform.OS === 'android') {
           const album = await MediaLibrary.getAlbumAsync('QuickLoop');
@@ -361,9 +361,9 @@ export const downloadMultipleImages = async (
           } else {
             await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
           }
-        }
-        
-        successCount++;
+          }
+          
+          successCount++;
       } catch (error) {
         console.error('Error processing image:', error);
         // Continue with next image
@@ -382,7 +382,7 @@ export const downloadMultipleImages = async (
 
 // Clear the image cache
 export const clearImageCache = async (): Promise<boolean> => {
-  try {
+          try {
     await FileSystem.deleteAsync(IMAGE_CACHE_DIR, { idempotent: true });
     await ensureCacheDirExists();
     return true;

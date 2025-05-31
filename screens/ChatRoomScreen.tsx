@@ -197,8 +197,8 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   const setupRealtimeSubscription = () => {
     if (subscription.current) {
       try {
-        subscription.current.unsubscribe();
-        console.log('Cleaned up previous subscription');
+      subscription.current.unsubscribe();
+      console.log('Cleaned up previous subscription');
       } catch (err) {
         console.log('Error cleaning up previous subscription:', err);
       }
@@ -210,69 +210,69 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
     console.log(`Setting up realtime subscription for room: ${room.id} on channel: ${channelName}`);
     
     try {
-      subscription.current = supabase
+    subscription.current = supabase
         .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'room_images',
-            filter: `room_id=eq.${room.id}`
-          },
-          (payload) => {
-            console.log('Realtime event received:', payload.eventType, payload);
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_images',
+          filter: `room_id=eq.${room.id}`
+        },
+        (payload) => {
+          console.log('Realtime event received:', payload.eventType, payload);
+          
+          if (payload.eventType === 'INSERT') {
+            const newImage = payload.new as RoomImage;
             
-            if (payload.eventType === 'INSERT') {
-              const newImage = payload.new as RoomImage;
+            setImages(prevImages => {
+              const exists = prevImages.some(img => img.id === newImage.id);
+              if (!exists) {
+                if (newImage.uploaded_by !== userName) {
+                  showToast(`${newImage.uploaded_by} shared a new image`);
+                }
+                return [newImage, ...prevImages];
+              }
+              return prevImages;
+            });
+          } 
+          else if (payload.eventType === 'DELETE') {
+            if (payload.old && payload.old.id) {
+              const deletedImageId = payload.old.id;
+              console.log('Received DELETE event for image:', deletedImageId);
               
               setImages(prevImages => {
-                const exists = prevImages.some(img => img.id === newImage.id);
-                if (!exists) {
-                  if (newImage.uploaded_by !== userName) {
-                    showToast(`${newImage.uploaded_by} shared a new image`);
-                  }
-                  return [newImage, ...prevImages];
-                }
-                return prevImages;
-              });
-            } 
-            else if (payload.eventType === 'DELETE') {
-              if (payload.old && payload.old.id) {
-                const deletedImageId = payload.old.id;
-                console.log('Received DELETE event for image:', deletedImageId);
+                const deletedImage = prevImages.find(img => img.id === deletedImageId);
                 
-                setImages(prevImages => {
-                  const deletedImage = prevImages.find(img => img.id === deletedImageId);
+                if (deletedImage && deletedImage.uploaded_by !== userName) {
+                  const deleterName = deletedImage.uploaded_by === room.created_by 
+                    ? 'the room owner' 
+                    : (deletedImage.uploaded_by || 'someone');
                   
-                  if (deletedImage && deletedImage.uploaded_by !== userName) {
-                    const deleterName = deletedImage.uploaded_by === room.created_by 
-                      ? 'the room owner' 
-                      : (deletedImage.uploaded_by || 'someone');
-                    
-                    showToast(`An image was deleted by ${deleterName}`);
-                  }
-                  
-                  if (selectedImages.has(deletedImageId)) {
-                    setSelectedImages(prev => {
-                      const newSelection = new Set(prev);
-                      newSelection.delete(deletedImageId);
-                      return newSelection;
-                    });
-                  }
-                  
-                  return prevImages.filter(img => img.id !== deletedImageId);
-                });
-              }
+                  showToast(`An image was deleted by ${deleterName}`);
+                }
+                
+                if (selectedImages.has(deletedImageId)) {
+                  setSelectedImages(prev => {
+                    const newSelection = new Set(prev);
+                    newSelection.delete(deletedImageId);
+                    return newSelection;
+                  });
+                }
+                
+                return prevImages.filter(img => img.id !== deletedImageId);
+              });
             }
           }
-        )
-        .subscribe((status, err) => {
-          console.log('Subscription status:', status);
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('Successfully subscribed to realtime updates for room:', room.id);
-          } else if (status === 'CHANNEL_ERROR') {
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('Subscription status:', status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to realtime updates for room:', room.id);
+        } else if (status === 'CHANNEL_ERROR') {
             console.log('Error subscribing to realtime updates:', err);
             
             // Don't immediately retry - implement exponential backoff
@@ -282,17 +282,17 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
             if (retryCount < maxRetries) {
               const delay = Math.pow(2, retryCount) * 2000; // Exponential backoff
               retryCount++;
-              
-              setTimeout(() => {
+          
+          setTimeout(() => {
                 console.log(`Attempting to re-establish subscription (retry ${retryCount}/${maxRetries})`);
-                setupRealtimeSubscription();
+            setupRealtimeSubscription();
               }, delay);
             }
-          } else if (status === 'TIMED_OUT') {
+        } else if (status === 'TIMED_OUT') {
             console.log('Subscription timed out, not automatically reconnecting');
             // Don't automatically reconnect to avoid infinite loops
-          }
-        });
+        }
+      });
     } catch (error) {
       console.log('Error setting up realtime subscription:', error);
     }
@@ -430,14 +430,14 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
         // Process this batch with retry logic
         const batchResults = await Promise.allSettled(
           batch.map(async (uri) => {
-            try {
+        try {
               console.log(`Uploading image: ${uri.substring(0, 50)}...`);
-              const newImage = await uploadRoomImage(room.id, uri, userName, 0.7);
-              completedUploads++;
-              setCompletedUploads(completedUploads);
+          const newImage = await uploadRoomImage(room.id, uri, userName, 0.7);
+          completedUploads++;
+          setCompletedUploads(completedUploads);
               setUploadProgress((completedUploads + failedUploads) / totalUploads);
-              return newImage;
-            } catch (error) {
+          return newImage;
+        } catch (error) {
               console.error(`Error uploading image:`, error);
               
               // Implement retry logic
@@ -453,8 +453,8 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
                 failedUploads++;
                 setUploadProgress((completedUploads + failedUploads) / totalUploads);
                 console.log(`Failed to upload image after ${maxRetries} attempts`);
-                return null;
-              }
+          return null;
+        }
             }
           })
         );
@@ -709,43 +709,43 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
       
       // This won't block the UI thread completely
       downloadMultipleImages(imagesToDownload).then(result => {
-        setDownloadProgress(1);
-        
-        setTimeout(() => {
-          setDownloadingAll(false);
-          setDownloadProgress(0);
-          
-          if (result.success) {
-            if (result.count === totalImages) {
-              showToast(`All ${result.count} images saved to your device`, 'success');
-            } else {
-              showToast(`${result.count} of ${totalImages} images saved to your device`, 'success');
-            }
-          } else {
-            if (Platform.OS === 'android' && result.permissionDenied) {
-              Alert.alert(
-                'Permission Required', 
-                'To save images, please enable media access in your device settings.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Open Settings', 
-                    onPress: openAndroidSettings
-                  }
-                ]
-              );
-            } else {
-              showToast('Failed to save images to your device', 'error');
-            }
-          }
-          
-          setSelectionMode(false);
-          setSelectedImages(new Set());
-        }, 800);
-      }).catch(error => {
-        console.error('Error downloading images:', error);
+      setDownloadProgress(1);
+      
+      setTimeout(() => {
         setDownloadingAll(false);
         setDownloadProgress(0);
+        
+        if (result.success) {
+          if (result.count === totalImages) {
+              showToast(`All ${result.count} images saved to your device`, 'success');
+          } else {
+              showToast(`${result.count} of ${totalImages} images saved to your device`, 'success');
+          }
+        } else {
+          if (Platform.OS === 'android' && result.permissionDenied) {
+            Alert.alert(
+              'Permission Required', 
+              'To save images, please enable media access in your device settings.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Open Settings', 
+                  onPress: openAndroidSettings
+                }
+              ]
+            );
+          } else {
+              showToast('Failed to save images to your device', 'error');
+          }
+        }
+        
+        setSelectionMode(false);
+        setSelectedImages(new Set());
+      }, 800);
+      }).catch(error => {
+      console.error('Error downloading images:', error);
+      setDownloadingAll(false);
+      setDownloadProgress(0);
         showToast('An error occurred while saving the images', 'error');
       });
     } catch (error) {
@@ -792,24 +792,24 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               
               // Delete in background - won't block the UI
               deleteRoomImage(imageId).then(success => {
-                if (success) {
+              if (success) {
                   showToast('Image deleted successfully', 'success');
-                } else {
+              } else {
                   showToast('Could not delete the image', 'error');
                   // Refresh images if delete failed
-                  loadImages();
-                }
-                
-                setTimeout(() => {
-                  setDeleting(false);
-                  setDeleteProgress(0);
-                }, 500);
-              }).catch(error => {
-                console.error('Error deleting image:', error);
+                loadImages();
+              }
+              
+              setTimeout(() => {
                 setDeleting(false);
                 setDeleteProgress(0);
+              }, 500);
+              }).catch(error => {
+              console.error('Error deleting image:', error);
+              setDeleting(false);
+              setDeleteProgress(0);
                 showToast('An error occurred while deleting the image', 'error');
-                loadImages();
+              loadImages();
               });
             } catch (error) {
               console.error('Error initiating delete:', error);
@@ -887,28 +887,28 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               // The actual deletion runs in the background and won't block navigation
               deleteMultipleRoomImages(imageIds).then(success => {
                 clearInterval(progressTimer);
-                setDeleteProgress(1);
-                
-                if (success) {
+              setDeleteProgress(1);
+              
+              if (success) {
                   showToast(`${imageIds.length} images deleted successfully`, 'success');
-                  setSelectionMode(false);
-                  setSelectedImages(new Set());
-                } else {
+                setSelectionMode(false);
+                setSelectedImages(new Set());
+              } else {
                   showToast('Some or all images could not be deleted', 'error');
-                  loadImages();
-                }
-                
-                setTimeout(() => {
-                  setDeleting(false);
-                  setDeleteProgress(0);
-                }, 500);
-              }).catch(error => {
-                console.error('Error deleting images:', error);
-                clearInterval(progressTimer);
+                loadImages();
+              }
+              
+              setTimeout(() => {
                 setDeleting(false);
                 setDeleteProgress(0);
+              }, 500);
+              }).catch(error => {
+              console.error('Error deleting images:', error);
+                clearInterval(progressTimer);
+              setDeleting(false);
+              setDeleteProgress(0);
                 showToast('An error occurred while deleting the images', 'error');
-                loadImages();
+              loadImages();
               });
             } catch (error) {
               console.error('Error initiating bulk delete:', error);
@@ -1016,73 +1016,73 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
             colors={['#FFFFFF', '#F8FAFC', '#F1F5F9']}
             style={styles.modalGradientContainer}
           >
-            <Text style={styles.modalTitle}>Actions</Text>
-            
-            <ScrollView>
-              <TouchableOpacity 
-                style={styles.actionItem}
-                onPress={() => {
-                  setShowActionModal(false);
-                  setShowFaceCapture(true);
-                }}
-              >
+          <Text style={styles.modalTitle}>Actions</Text>
+          
+          <ScrollView>
+            <TouchableOpacity 
+              style={styles.actionItem}
+              onPress={() => {
+                setShowActionModal(false);
+                setShowFaceCapture(true);
+              }}
+            >
                 <Ionicons name="person-circle-outline" size={26} color="#8B5CF6" />
-                <Text style={styles.actionText}>Find My Photos</Text>
-              </TouchableOpacity>
-              
-              {images.length > 0 && (
-                <>
-                  <View style={styles.actionDivider} />
-                  
+              <Text style={styles.actionText}>Find My Photos</Text>
+            </TouchableOpacity>
+            
+            {images.length > 0 && (
+              <>
+                <View style={styles.actionDivider} />
+                
+                <TouchableOpacity 
+                  style={styles.actionItem}
+                  onPress={() => {
+                    setShowActionModal(false);
+                    toggleSelectionMode();
+                  }}
+                >
+                  <Ionicons 
+                      name={selectionMode ? "checkmark-circle-outline" : "albums-outline"} 
+                      size={26} 
+                      color="#F59E0B" 
+                  />
+                  <Text style={styles.actionText}>
+                    {selectionMode ? "Cancel Selection" : "Select Images"}
+                  </Text>
+                </TouchableOpacity>
+                
+                {images.length > 0 && (
                   <TouchableOpacity 
                     style={styles.actionItem}
                     onPress={() => {
                       setShowActionModal(false);
-                      toggleSelectionMode();
+                      handleDownloadSelectedImages();
                     }}
                   >
-                    <Ionicons 
-                      name={selectionMode ? "checkmark-circle-outline" : "albums-outline"} 
-                      size={26} 
-                      color="#F59E0B" 
-                    />
+                      <Ionicons name="cloud-download-outline" size={26} color="#3B82F6" />
                     <Text style={styles.actionText}>
-                      {selectionMode ? "Cancel Selection" : "Select Images"}
+                      {selectedImages.size > 0 
+                        ? `Download ${selectedImages.size} Selected Images` 
+                          : "Download All Images (Except Yours)"}
                     </Text>
                   </TouchableOpacity>
-                  
-                  {images.length > 0 && (
-                    <TouchableOpacity 
-                      style={styles.actionItem}
-                      onPress={() => {
-                        setShowActionModal(false);
-                        handleDownloadSelectedImages();
-                      }}
-                    >
-                      <Ionicons name="cloud-download-outline" size={26} color="#3B82F6" />
-                      <Text style={styles.actionText}>
-                        {selectedImages.size > 0 
-                          ? `Download ${selectedImages.size} Selected Images` 
-                          : "Download All Images (Except Yours)"}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  
-                  {isRoomCreator && (
-                    <TouchableOpacity 
-                      style={styles.actionItem}
-                      onPress={() => {
-                        setShowActionModal(false);
-                        handleDeleteAllImages();
-                      }}
-                    >
+                )}
+                
+                {isRoomCreator && (
+                  <TouchableOpacity 
+                    style={styles.actionItem}
+                    onPress={() => {
+                      setShowActionModal(false);
+                      handleDeleteAllImages();
+                    }}
+                  >
                       <Ionicons name="trash-bin-outline" size={26} color="#EF4444" />
-                      <Text style={styles.actionText}>Delete All Images</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </ScrollView>
+                    <Text style={styles.actionText}>Delete All Images</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </ScrollView>
           </LinearGradient>
         </View>
       </TouchableOpacity>
@@ -1179,8 +1179,8 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
         inputRange: [0, 0.5, 1],
         outputRange: [0.7, 1.2, 0.7],
       });
-      
-      return (
+
+  return (
         <Animated.View 
           key={index}
           style={[
@@ -1241,22 +1241,22 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
       >
         <View style={styles.headerContent}>
           <View style={styles.headerRow}>
-            <TouchableOpacity 
-              style={styles.backButton} 
-              onPress={handleBackToRoomList}
-            >
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={handleBackToRoomList}
+        >
               <Ionicons name="chevron-back" size={24} color="white" />
-            </TouchableOpacity>
-            
+        </TouchableOpacity>
+        
             <View style={styles.roomInfoContainer}>
               <TouchableOpacity 
                 style={styles.roomInfo}
                 onPress={copyRoomCode}
                 activeOpacity={0.7}
               >
-                <Text style={styles.roomName}>{room.name}</Text>
+          <Text style={styles.roomName}>{room.name}</Text>
                 <View style={styles.roomCodeContainer}>
-                  <Text style={styles.roomCode}>Code: {room.id}</Text>
+          <Text style={styles.roomCode}>Code: {room.id}</Text>
                   <Ionicons name="copy-outline" size={12} color="rgba(255,255,255,0.7)" style={styles.copyIcon} />
                 </View>
               </TouchableOpacity>
@@ -1291,15 +1291,15 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
                   <Ionicons name="information-circle-outline" size={16} color="white" />
                 </TouchableOpacity>
               </View>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => setShowActionModal(true)}
-            >
+        </View>
+        
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setShowActionModal(true)}
+        >
               <Ionicons name="ellipsis-vertical" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+        </TouchableOpacity>
+      </View>
         </View>
       </LinearGradient>
       
@@ -1376,7 +1376,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               style={styles.floatingButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-            >
+          >
               <Ionicons name="camera" size={28} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
@@ -1390,7 +1390,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               style={styles.floatingButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-            >
+          >
               <Ionicons name="images" size={28} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
@@ -1407,15 +1407,15 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
                 : 'Uploading image...'}
             </Text>
           </View>
-          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarContainer}>
             <Animated.View 
-              style={[
+                style={[
                 styles.progressBarBackground,
                 { width: progressAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['0%', '100%']
                 }) }
-              ]} 
+                ]} 
             >
               <LinearGradient
                 colors={['#3B82F6', '#6366F1', '#8B5CF6', '#A855F7']}
@@ -1437,15 +1437,15 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               Deleting images...
             </Text>
           </View>
-          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarContainer}>
             <Animated.View 
-              style={[
+                style={[
                 styles.progressBarBackground, 
                 { width: progressAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['0%', '100%']
                 }) }
-              ]} 
+                ]} 
             >
               <LinearGradient
                 colors={['#EF4444', '#E11D48', '#BE123C', '#9F1239']}
@@ -1467,12 +1467,12 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               Saving images...
             </Text>
           </View>
-          <View style={styles.progressBarContainer}>
-            <View 
-              style={[
+            <View style={styles.progressBarContainer}>
+              <View 
+                style={[
                 styles.progressBarBackground, 
-                { width: `${downloadProgress * 100}%` }
-              ]} 
+                  { width: `${downloadProgress * 100}%` }
+                ]} 
             >
               <LinearGradient
                 colors={['#10B981', '#059669', '#047857']}

@@ -90,7 +90,6 @@ const compressImageIfNeeded = async (uri: string): Promise<string> => {
 export const uploadToCloudinary = async (uri: string, quality?: number): Promise<string> => {
   const MAX_RETRIES = 3;
   const TIMEOUT_MS = 30000; // 30 seconds
-  const CHUNK_SIZE = 500000; // 500KB chunks for large files
   
   let attempt = 0;
   
@@ -99,58 +98,35 @@ export const uploadToCloudinary = async (uri: string, quality?: number): Promise
     try {
       console.log(`Uploading to Cloudinary (attempt ${attempt}/${MAX_RETRIES})`);
       
-      // Potentially compress if needed (implementation would be enhanced in production)
-      const processedUri = await compressImageIfNeeded(uri);
-      
-      // Get file information to check size
-      const fileInfo = await FileSystem.getInfoAsync(processedUri, { size: true });
-      const fileSize = fileInfo.size || 0;
-      
-      // For larger files, consider chunked upload, but for now we'll use a single upload with timeout
-      console.log(`File size: ${fileSize} bytes`);
+      // Get file information
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('File does not exist');
+      }
       
       // Prepare the form data
       const formData = new FormData();
       
       // Get the file name and type
-      const uriParts = processedUri.split('.');
+      const uriParts = uri.split('.');
       const fileType = uriParts[uriParts.length - 1] || 'jpg';
       
       // Add the file to the form
       formData.append('file', {
-        uri: processedUri,
+        uri: uri,
         name: `photo_${Date.now()}.${fileType}`,
         type: `image/${fileType}`,
       } as any);
       
-      // Add the upload preset
+      // Add the upload preset (this is required for unsigned uploads)
       formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
       
-      // Set quality parameter if provided, otherwise use auto
+      // Set quality parameter if provided
       if (quality && quality > 0 && quality <= 1) {
-        // Convert quality from 0-1 scale to percentage for Cloudinary
-        const qualityValue = Math.round(quality * 100).toString();
-        formData.append('quality', qualityValue);
-      } else {
-        formData.append('quality', 'auto'); // Let Cloudinary optimize quality
+        formData.append('quality', Math.round(quality * 100).toString());
       }
       
-      formData.append('fetch_format', 'auto'); // Use optimal format (WebP where supported)
-      
-      // For large files, we can use tags to identify them for later optimizations
-      // This is allowed in unsigned uploads
-      if (fileSize > 1000000) { // For files > 1MB
-        formData.append('tags', 'large_file,compression_candidate');
-      }
-      
-      // Send the request with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.log('Upload timed out, aborting');
-      }, TIMEOUT_MS);
-      
-      console.log('Sending upload request to Cloudinary...');
+      // Send the request
       const response = await fetch(CLOUDINARY_UPLOAD_URL, {
         method: 'POST',
         body: formData,
@@ -158,40 +134,26 @@ export const uploadToCloudinary = async (uri: string, quality?: number): Promise
           'Accept': 'application/json',
           'Content-Type': 'multipart/form-data',
         },
-        signal: controller.signal
       });
       
-      clearTimeout(timeoutId);
-      
-      // Parse the response
       const data = await response.json();
       
-      if (response.ok) {
+      if (response.ok && data.secure_url) {
         console.log('Cloudinary upload successful');
-        // Return the secure URL of the uploaded image
         return data.secure_url;
       } else {
         throw new Error(data.error?.message || 'Failed to upload image');
       }
     } catch (error: any) {
-      const isTimeout = error.name === 'AbortError';
-      const isNetworkError = error.message && (
-        error.message.includes('Network') || 
-        error.message.includes('network') ||
-        error.message.includes('connection')
-      );
-      
       console.error(`Error uploading to Cloudinary (attempt ${attempt}/${MAX_RETRIES}):`, error);
       
-      // Only retry on timeout or network errors
-      if (attempt < MAX_RETRIES && (isTimeout || isNetworkError)) {
-        const delay = 1000 * attempt; // Exponential backoff
+      if (attempt < MAX_RETRIES) {
+        const delay = 1000 * attempt;
         console.log(`Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
       
-      // If we've reached max retries or it's not a retryable error, throw
       throw error;
     }
   }

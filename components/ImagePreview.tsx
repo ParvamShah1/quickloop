@@ -46,7 +46,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const flatListRef = useRef<FlatList>(null);
-  
+
   // Reset current index when initialIndex changes
   useEffect(() => {
     if (visible) {
@@ -134,29 +134,29 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={28} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.imageCounter}>
-              {currentIndex + 1} / {images.length}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.imageCounter}>
+            {currentIndex + 1} / {images.length}
+          </Text>
+          <TouchableOpacity style={styles.infoButton}>
+            <Text style={styles.uploaderText}>
+              {images[currentIndex]?.uploaded_by || 'Unknown'}
             </Text>
-            <TouchableOpacity style={styles.infoButton}>
-              <Text style={styles.uploaderText}>
-                {images[currentIndex]?.uploaded_by || 'Unknown'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+        </View>
 
-          <FlatList
-            ref={flatListRef}
-            data={images}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
+        <FlatList
+          ref={flatListRef}
+          data={images}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
             renderItem={renderItem}
-            keyExtractor={(item) => item.id || Math.random().toString()}
-            onViewableItemsChanged={handleViewableItemsChanged}
+          keyExtractor={(item) => item.id || Math.random().toString()}
+          onViewableItemsChanged={handleViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             getItemLayout={getItemLayout}
             initialNumToRender={3}
@@ -169,28 +169,28 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
             snapToAlignment="center"
             snapToInterval={width}
             onScrollToIndexFailed={handleScrollToIndexFailed}
-          />
+        />
 
-          <View style={styles.footer}>
-            {currentIndex > 0 && (
-              <TouchableOpacity
-                style={styles.navButton}
+        <View style={styles.footer}>
+          {currentIndex > 0 && (
+            <TouchableOpacity
+              style={styles.navButton}
                 onPress={goToPrevious}
-              >
-                <Ionicons name="chevron-back" size={28} color="#fff" />
-              </TouchableOpacity>
-            )}
-            
-            {currentIndex < images.length - 1 && (
-              <TouchableOpacity
-                style={[styles.navButton, styles.rightNavButton]}
+            >
+              <Ionicons name="chevron-back" size={28} color="#fff" />
+            </TouchableOpacity>
+          )}
+          
+          {currentIndex < images.length - 1 && (
+            <TouchableOpacity
+              style={[styles.navButton, styles.rightNavButton]}
                 onPress={goToNext}
-              >
-                <Ionicons name="chevron-forward" size={28} color="#fff" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </SafeAreaView>
+            >
+              <Ionicons name="chevron-forward" size={28} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </SafeAreaView>
       </View>
     </Modal>
   );
