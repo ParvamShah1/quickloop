@@ -3,10 +3,11 @@ import { Platform, NativeModules } from 'react-native';
 import { uploadToCloudinary, deleteFromCloudinary, deleteMultipleFromCloudinary } from './cloudinary';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { removeCachedImage } from './imageUtils';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 
-// Replace with your Supabase URL and anon key
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// Use imported environment variables
+const supabaseUrl = SUPABASE_URL;
+const supabaseAnonKey = SUPABASE_ANON_KEY;
 
 // Create client with AsyncStorage for persistence
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

@@ -1,16 +1,11 @@
 // Cloudinary configuration and utilities
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_API_KEY, SUPABASE_ANON_KEY } from '@env';
 
-// Replace with your Cloudinary credentials
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET;
+// Use imported environment variables
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 const CLOUDINARY_DESTROY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`;
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY; // Will be replaced with a safer approach
-
-// Supabase API key for authenticating with Edge Functions
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 // Extract the public ID from a Cloudinary URL
 export const getCloudinaryPublicId = (url: string): string | null => {
