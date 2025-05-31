@@ -1,11 +1,7 @@
 // AWS SNS Service for React Native
 import { Buffer } from 'buffer';
 import * as crypto from 'crypto-browserify';
-
-
-const AWS_REGION = process.env.AWS_REGION; // Replace with your AWS region
-const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID; // Replace with your access key
-const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY; // Replace with your secret key
+import { AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY } from '@env';
 
 // AWS SNS API endpoint
 const SNS_ENDPOINT = `https://sns.${AWS_REGION}.amazonaws.com`;
