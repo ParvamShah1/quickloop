@@ -15,6 +15,24 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import { RoomImage } from '../lib/supabase';
 
+// Define the API response structure
+interface FaceMatchResult {
+  image_url: string;
+  image_index: number;
+  best_similarity: number;
+  best_distance: number;
+  is_match: boolean;
+  total_faces_in_image: number;
+}
+
+interface FaceMatchResponse {
+  image_best_matches?: FaceMatchResult[];
+  errors?: any[];
+  total_processed?: number;
+  detail?: string | any[];  // FastAPI error format
+  message?: string;         // Generic error message
+}
+
 interface FaceCaptureProps {
   visible: boolean;
   onClose: () => void;
@@ -105,40 +123,32 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({
         throw new Error('No room images available to search');
       }
       
-      // Create form data for API request
-      const formData = new FormData();
+      // Get base64 image data for the captured face
+      const base64Image = await FileSystem.readAsStringAsync(capturedImage, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       
-      // Get the file name and type
-      const uriParts = capturedImage.split('.');
-      const fileType = uriParts[uriParts.length - 1] || 'jpg';
-      
-      // Add captured face image as a file
-      formData.append('captured', {
-        uri: capturedImage,
-        name: `face_${Date.now()}.${fileType}`,
-        type: `image/${fileType}`,
-      } as any);
-      
-      // FIXED: Send image URLs as JSON string array (backend expects this format)
+      // Extract image URLs from room images
       const imageUrls = roomImages.map(img => img.image_url);
-      formData.append('images', JSON.stringify(imageUrls));
       
       console.log('Sending face image:', capturedImage);
       console.log('With room images count:', roomImages.length);
-      console.log('Image URLs:', imageUrls);
       
       // Create an AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased to 45 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       
       try {
-        // Make request to face matching API with multipart/form-data
-        const response = await fetch('https://face-matching-api-970501065345.asia-south1.run.app/match_faces/', {
+        // Make request to face matching API with JSON data
+        const response = await fetch('https://face-recognition-api-970501065345.asia-south1.run.app/match_faces/', {
           method: 'POST',
-          body: formData,
+          body: JSON.stringify({
+            captured: base64Image,
+            images: imageUrls
+          }),
           headers: {
             'Accept': 'application/json',
-            // Don't set Content-Type - let browser handle it for FormData
+            'Content-Type': 'application/json'
           },
           signal: controller.signal
         });
@@ -154,9 +164,8 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({
         // Get the response text
         const responseText = await response.text();
         console.log('API Response text:', responseText);
-        
         // Parse the response as JSON if it's valid
-        let result;
+        let result: FaceMatchResponse;
         try {
           result = JSON.parse(responseText);
         } catch (e) {
@@ -168,12 +177,18 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({
         if (response.ok) {
           console.log('Face matching result:', result);
           
-          if (result.matches && result.matches.length > 0) {
+          if (result.image_best_matches && result.image_best_matches.length > 0) {
             // Log match details
-            console.log(`Found ${result.matches.length} matches:`, result.matches);
+            console.log(`Found ${result.image_best_matches.length} matches:`, result.image_best_matches);
+            
+            // Transform the data to match the expected format
+            const formattedMatches = result.image_best_matches.map((match: FaceMatchResult) => ({
+              url: match.image_url,
+              similarity: match.best_similarity
+            }));
             
             // Call the callback with matched images
-            onMatchFound(result.matches);
+            onMatchFound(formattedMatches);
             onClose(); // Close the modal
           } else {
             // Check if there were processing errors
@@ -184,8 +199,14 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({
             );
           }
         } else {
-          // FIXED: Handle FastAPI error format (uses 'detail' field)
-          const errorMessage = result?.detail || result?.message || `HTTP ${response.status}: Failed to match faces`;
+          // Handle FastAPI error format (uses 'detail' field)
+          const errorDetail = result?.detail;
+          const errorMessage = typeof errorDetail === 'string' 
+            ? errorDetail 
+            : Array.isArray(errorDetail) 
+              ? JSON.stringify(errorDetail) 
+              : result?.message || `HTTP ${response.status}: Failed to match faces`;
+          
           console.error('API error:', errorMessage);
           console.error('Full error response:', result);
           throw new Error(errorMessage);

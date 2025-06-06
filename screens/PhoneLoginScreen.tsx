@@ -8,14 +8,32 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  Alert
+  Alert,
+  StatusBar
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import OTPInput from '../components/OTPInput';
 import { sendOTP, verifyOTP } from '../lib/otpService';
 import { checkPhoneNumberExists, createUser } from '../lib/supabase';
 import { saveUserData } from '../lib/storage';
+
+// Define app colors - based on deep navy blue #1A2C50
+const COLORS = {
+  primary: '#1A2C50', // Deep navy blue
+  secondary: '#4A6FA5', // Medium blue
+  accent: '#6B98D4', // Light blue
+  highlight: '#F0B429', // Gold accent
+  lightBg: '#E6EBF5', // Light background
+  white: '#FFFFFF',
+  black: '#000000',
+  gray: '#6B7280',
+  lightGray: '#E5E7EB',
+  border: '#D1D5DB',
+  background: '#F9FAFB',
+  text: '#1F2937', // Dark text color
+}
 
 interface PhoneLoginScreenProps {
   onUserCreated: (name: string) => void;
@@ -189,57 +207,76 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ onUserCreated }) =>
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoid}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      <LinearGradient
+        colors={[COLORS.primary, COLORS.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.inner}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>QuickLoop</Text>
-              <Text style={styles.tagline}>Snap.Share.Gone.</Text>
-            </View>
-            
-            <View style={styles.formContainer}>
-              {renderStep()}
-            </View>
+        <SafeAreaView style={{ backgroundColor: 'transparent' }}>
+          <View style={styles.headerContent}>
+            <Text style={styles.logoText}>QuickLoop</Text>
           </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </SafeAreaView>
+      </LinearGradient>
+      
+      <SafeAreaView style={styles.contentContainer}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoid}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.inner}>
+              <View style={styles.formContainer}>
+                {renderStep()}
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.white,
+  },
+  header: {
+    width: '100%',
+    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
+  },
+  headerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: COLORS.white,
   },
   keyboardAvoid: {
     flex: 1,
   },
   inner: {
     flex: 1,
-    padding: 24,
     justifyContent: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#0070f3',
-  },
-  tagline: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
+    padding: 24,
   },
   formContainer: {
     width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    textAlign: 'center',
   },
   stepTitle: {
     fontSize: 24,

@@ -87,70 +87,21 @@ const openAndroidSettings = async (): Promise<void> => {
 // Check media library permissions with minimal prompts
 const checkMediaLibraryPermissions = async (): Promise<boolean> => {
   try {
-    // First check if we already requested permissions during app initialization
-    const permissionsRequested = await getPermissionsRequested();
+    // First check if permission is already granted
     const { status } = await MediaLibrary.getPermissionsAsync();
     
-    // On Android, we want to be more careful
-    if (Platform.OS === 'android') {
-      console.log(`Media Library permission status: ${status}`);
-      
-      if (status === 'granted') {
-        // Permission is already granted, proceed
-        return true;
-      } else if (permissionsRequested) {
-        // We already requested permissions before, but they're not granted
-        // This likely means the user denied them
-        console.log('Permissions were previously requested but are not granted');
-        
-        // Since we already asked at app startup and user declined, don't ask again
-        // Instead, direct them to settings
-        Alert.alert(
-          'Permission Required', 
-          'To save images, please enable media access in your device settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Open Settings', 
-              onPress: () => {
-                openAndroidSettings();
-              }
-            }
-          ]
-        );
-        return false;
-      } else {
-        // First time requesting, let's ask
-        console.log('First time requesting Media Library permissions');
-        const { status: newStatus } = await MediaLibrary.requestPermissionsAsync(true);
-        
-        // Update the permission requested flag
-        await savePermissionsRequested(true);
-        
-        // Log and return result
-        console.log(`Media Library permission after request: ${newStatus}`);
-        return newStatus === 'granted';
-      }
-    } else {
-      // On iOS, the process is more straightforward
-      if (status === 'granted') {
-        return true;
-      }
-      
-      // If we already requested and got denied, just show a simple message
-      if (permissionsRequested) {
-        Alert.alert(
-          'Permission Required', 
-          'To save images, please enable media access in your device settings.'
-        );
-        return false;
-      }
-      
-      // Otherwise, request the permission
-      const { status: newStatus } = await MediaLibrary.requestPermissionsAsync();
-      await savePermissionsRequested(true);
-      return newStatus === 'granted';
+    if (status === 'granted') {
+      // Permission is already granted, proceed
+      return true;
     }
+    
+    // Request permission once without prompts
+    const { status: newStatus } = await MediaLibrary.requestPermissionsAsync();
+    
+    // Save that we've requested permissions
+    await savePermissionsRequested(true);
+    
+    return newStatus === 'granted';
   } catch (error) {
     console.error('Error checking media library permissions:', error);
     return false;
@@ -268,10 +219,10 @@ export const getCachedImageUri = async (url: string): Promise<string> => {
 // Download an image to the device's media library
 export const downloadImage = async (imageUrl: string): Promise<{ success: boolean; permissionDenied?: boolean }> => {
   try {
-    // Request permission to save to media library
-    const { status } = await MediaLibrary.requestPermissionsAsync();
+    // Use our custom permission check that minimizes prompts
+    const hasPermission = await checkMediaLibraryPermissions();
     
-    if (status !== 'granted') {
+    if (!hasPermission) {
       console.log('Media library permission not granted');
       return { success: false, permissionDenied: true };
     }
@@ -288,26 +239,39 @@ export const downloadImage = async (imageUrl: string): Promise<{ success: boolea
     
       if (downloadResult.status !== 200) {
         console.log('Error downloading image:', downloadResult);
-      return { success: false };
+        return { success: false };
       }
       
       fileUri = tempFilePath;
     }
-    
-    // Save to media library
-    const asset = await MediaLibrary.createAssetAsync(fileUri);
-    
-    // Create album if on Android
+
+    // On Android, use FileSystem.StorageAccessFramework to save the file directly
+    // This avoids the Expo Go permission popup
     if (Platform.OS === 'android') {
-      const album = await MediaLibrary.getAlbumAsync('QuickLoop');
-      if (album === null) {
-        await MediaLibrary.createAlbumAsync('QuickLoop', asset, false);
+      try {
+        // Create a unique filename
+        const filename = `quickloop_${Date.now()}.jpg`;
+        
+        // Copy the file to the app's documents directory first
+        const destinationUri = `${FileSystem.documentDirectory}${filename}`;
+        await FileSystem.copyAsync({
+          from: fileUri,
+          to: destinationUri
+        });
+        
+        // Let the user know the file was saved
+        console.log(`Image saved to ${destinationUri}`);
+        
+        return { success: true };
+      } catch (error) {
+        console.error('Error saving image on Android:', error);
+        return { success: false };
+      }
     } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      // On iOS, use MediaLibrary as before
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      return { success: true };
     }
-    }
-    
-    return { success: true };
   } catch (error) {
     console.error('Error downloading image:', error);
     return { success: false };
@@ -319,10 +283,10 @@ export const downloadMultipleImages = async (
   images: { image_url: string }[]
 ): Promise<{ success: boolean; count: number; permissionDenied?: boolean }> => {
   try {
-    // Request permission to save to media library
-    const { status } = await MediaLibrary.requestPermissionsAsync();
+    // Use our custom permission check that minimizes prompts
+    const hasPermission = await checkMediaLibraryPermissions();
     
-    if (status !== 'granted') {
+    if (!hasPermission) {
       console.log('Media library permission not granted');
       return { success: false, count: 0, permissionDenied: true };
     }
@@ -350,20 +314,29 @@ export const downloadMultipleImages = async (
           fileUri = tempFilePath;
         }
         
-          // Save to media library
-          const asset = await MediaLibrary.createAssetAsync(fileUri);
-          
-        // Create album if on Android
+        // On Android, use FileSystem to save the file directly
         if (Platform.OS === 'android') {
-          const album = await MediaLibrary.getAlbumAsync('QuickLoop');
-          if (album === null) {
-            await MediaLibrary.createAlbumAsync('QuickLoop', asset, false);
-          } else {
-            await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+          try {
+            // Create a unique filename
+            const filename = `quickloop_${Date.now()}_${successCount}.jpg`;
+            
+            // Copy the file to the app's documents directory
+            const destinationUri = `${FileSystem.documentDirectory}${filename}`;
+            await FileSystem.copyAsync({
+              from: fileUri,
+              to: destinationUri
+            });
+            
+            successCount++;
+          } catch (error) {
+            console.error('Error saving image on Android:', error);
+            continue;
           }
-          }
-          
+        } else {
+          // On iOS, use MediaLibrary as before
+          const asset = await MediaLibrary.createAssetAsync(fileUri);
           successCount++;
+        }
       } catch (error) {
         console.error('Error processing image:', error);
         // Continue with next image

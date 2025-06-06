@@ -7,7 +7,9 @@ import {
   Image,
   TouchableOpacity,
   Modal,
-  Dimensions
+  Dimensions,
+  Platform,
+  ToastAndroid
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -44,9 +46,6 @@ const MatchedPhotos: React.FC<MatchedPhotosProps> = ({
   };
 
   const renderPhoto = ({ item }: { item: MatchedPhoto }) => {
-    // Calculate similarity percentage
-    const similarityPercentage = Math.round(item.similarity * 100);
-    
     return (
       <TouchableOpacity 
         style={styles.photoContainer}
@@ -57,9 +56,6 @@ const MatchedPhotos: React.FC<MatchedPhotosProps> = ({
           style={styles.photo}
           resizeMode="cover"
         />
-        <View style={styles.similarityBadge}>
-          <Text style={styles.similarityText}>{similarityPercentage}% Match</Text>
-        </View>
       </TouchableOpacity>
     );
   };

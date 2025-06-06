@@ -168,6 +168,19 @@ export interface UserRoom {
   room?: Room; // Joined room data
 }
 
+// Define Activity interface
+export interface Activity {
+  id?: string;
+  type: 'join' | 'upload' | 'create';
+  user_id: string;
+  username: string;
+  room_id: string;
+  room_name?: string;
+  timestamp?: string;
+  photo_count?: number;
+  seen?: boolean;
+}
+
 // Helper functions for database operations
 export const createUser = async (name: string, phoneNumber?: string): Promise<User | null> => {
   try {
@@ -711,5 +724,115 @@ export const cleanupExpiredRooms = async (): Promise<boolean> => {
   } catch (error) {
     console.error('Exception cleaning up expired rooms:', error);
     return false;
+  }
+};
+
+// Get the number of members in a room
+export const getRoomMemberCount = async (roomId: string): Promise<number> => {
+  try {
+    const { count, error } = await supabase
+      .from('user_rooms')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId);
+    
+    if (error) {
+      console.error('Error getting room member count:', error);
+      return 0;
+    }
+    
+    return count || 0;
+  } catch (error) {
+    console.error('Exception getting room member count:', error);
+    return 0;
+  }
+};
+
+// Create a new activity record
+export const createActivity = async (activity: Activity): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('activities')
+      .insert({
+        type: activity.type,
+        user_id: activity.user_id,
+        username: activity.username,
+        room_id: activity.room_id,
+        room_name: activity.room_name,
+        photo_count: activity.photo_count,
+        seen: false
+      });
+    
+    if (error) {
+      console.error('Error creating activity:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception creating activity:', error);
+    return false;
+  }
+};
+
+// Get activities for a user
+export const getUserActivities = async (userId: string): Promise<Activity[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false });
+    
+    if (error) {
+      console.error('Error getting activities:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Exception getting activities:', error);
+    return [];
+  }
+};
+
+// Mark activities as seen
+export const markActivitiesAsSeen = async (userId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('activities')
+      .update({ seen: true })
+      .eq('user_id', userId)
+      .eq('seen', false);
+    
+    if (error) {
+      console.error('Error marking activities as seen:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception marking activities as seen:', error);
+    return false;
+  }
+};
+
+// Get count of unseen activities
+export const getUnseenActivityCount = async (userId: string): Promise<number> => {
+  try {
+    const { count, error } = await supabase
+      .from('activities')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('seen', false);
+    
+    if (error) {
+      console.error('Error getting unseen activity count:', error);
+      return 0;
+    }
+    
+    return count || 0;
+  } catch (error) {
+    console.error('Exception getting unseen activity count:', error);
+    return 0;
   }
 }; 

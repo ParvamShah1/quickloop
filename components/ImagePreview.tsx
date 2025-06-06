@@ -10,9 +10,13 @@ import {
   StatusBar,
   SafeAreaView,
   FlatList,
+  Alert,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RoomImage } from '../lib/supabase';
+import { downloadImage } from '../lib/imageUtils';
 
 // Memoized image item component for better performance
 const ImageItem = memo(({ item }: { item: RoomImage }) => {
@@ -45,6 +49,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   onClose,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [downloading, setDownloading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   // Reset current index when initialIndex changes
@@ -53,6 +58,39 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
       setCurrentIndex(initialIndex);
     }
   }, [initialIndex, visible]);
+
+  // Handle image download
+  const handleDownload = useCallback(async () => {
+    if (currentIndex < 0 || currentIndex >= images.length) return;
+    
+    try {
+      setDownloading(true);
+      const imageUrl = images[currentIndex].image_url;
+      
+      const result = await downloadImage(imageUrl);
+      
+      setDownloading(false);
+      
+      if (result.success) {
+        // Show success message with toast instead of alert
+        if (Platform.OS === 'android') {
+          // On Android, we can use ToastAndroid
+          ToastAndroid.show('Image saved to your device', ToastAndroid.SHORT);
+        } else {
+          // On iOS, we'll keep the alert for now
+          Alert.alert('Success', 'Image saved to your device');
+        }
+      } else if (result.permissionDenied) {
+        Alert.alert('Permission Denied', 'Unable to save image. Please grant storage permission in settings.');
+      } else {
+        Alert.alert('Error', 'Failed to save image');
+      }
+    } catch (error) {
+      setDownloading(false);
+      console.error('Error downloading image:', error);
+      Alert.alert('Error', 'Failed to save image');
+    }
+  }, [currentIndex, images]);
 
   // Use memoized callbacks for better performance
   const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
@@ -181,6 +219,19 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
             </TouchableOpacity>
           )}
           
+          {/* Download button */}
+          <TouchableOpacity
+            style={styles.downloadButton}
+            onPress={handleDownload}
+            disabled={downloading}
+          >
+            <Ionicons 
+              name={downloading ? "cloud-download" : "cloud-download-outline"} 
+              size={28} 
+              color="#fff" 
+            />
+          </TouchableOpacity>
+          
           {currentIndex < images.length - 1 && (
             <TouchableOpacity
               style={[styles.navButton, styles.rightNavButton]}
@@ -255,6 +306,15 @@ const styles = StyleSheet.create({
   },
   rightNavButton: {
     alignSelf: 'flex-end',
+  },
+  downloadButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
   },
 });
 

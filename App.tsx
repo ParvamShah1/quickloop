@@ -6,6 +6,8 @@ import * as MediaLibrary from 'expo-media-library';
 import PhoneLoginScreen from './screens/PhoneLoginScreen';
 import ChatRoomScreen from './screens/ChatRoomScreen';
 import RoomListScreen from './screens/RoomListScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import ActivityScreen from './screens/ActivityScreen';
 import { Room, User, createUser, getUserByUsername, leaveRoom } from './lib/supabase';
 import { 
   getUserName, 
@@ -21,10 +23,30 @@ import {
 } from './lib/storage';
 import { initImageCache, clearExpiredImageCaches } from './lib/imageUtils';
 
+// Define app colors - based on deep navy blue #1A2C50
+const COLORS = {
+  primary: '#1A2C50', // Deep navy blue
+  secondary: '#4A6FA5', // Medium blue
+  accent: '#6B98D4', // Light blue
+  highlight: '#F0B429', // Gold accent
+  lightBg: '#E6EBF5', // Light background
+  white: '#FFFFFF',
+  black: '#000000',
+  gray: '#6B7280',
+  lightGray: '#E5E7EB',
+  border: '#D1D5DB',
+  background: '#F9FAFB',
+  text: '#1F2937', // Dark text color
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [currentTab, setCurrentTab] = useState('home');
+  const [activities, setActivities] = useState<any[]>([]);
 
   // Request all necessary permissions and initialize systems
   const initializeApp = async () => {
@@ -40,67 +62,24 @@ export default function App() {
       
       if (permissionsRequested) {
         console.log('Permissions were previously requested');
-        
-        // Even if we've requested before, let's check the current status on Android
-        // to make sure permissions didn't get revoked
-        if (Platform.OS === 'android') {
-          const cameraStatus = (await ImagePicker.getCameraPermissionsAsync()).status;
-          const mediaLibraryStatus = (await ImagePicker.getMediaLibraryPermissionsAsync()).status;
-          const mediaLibraryWriteStatus = (await MediaLibrary.getPermissionsAsync()).status;
-          
-          console.log('Current permission status on Android:');
-          console.log(`- Camera: ${cameraStatus}`);
-          console.log(`- Media Library: ${mediaLibraryStatus}`);
-          console.log(`- Media Library Write: ${mediaLibraryWriteStatus}`);
-          
-          // If any permissions are missing, request them again
-          if (cameraStatus !== 'granted' || 
-              mediaLibraryStatus !== 'granted' || 
-              mediaLibraryWriteStatus !== 'granted') {
-            console.log('Some permissions are not granted, requesting again...');
-            // Continue to permission requests below
-          } else {
-            return; // All permissions are already granted
-          }
-        } else {
-          return; // On iOS, we trust that permissions were previously requested
-        }
+        return; // Don't ask again if we've already requested
       }
       
       console.log('Requesting app permissions');
       
-      // Request camera permissions
-      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-      console.log('Camera permission:', cameraPermission.status);
+      // Request all permissions at once to avoid multiple prompts later
       
-      // Request media library permissions
-      const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log('Media library permission:', mediaLibraryPermission.status);
+      // Camera permissions
+      await ImagePicker.requestCameraPermissionsAsync();
       
-      // Request media library write permissions (needed for saving images on Android)
-      if (Platform.OS === 'android') {
-        // On Android, we need to be more explicit about requesting write permissions
-        const mediaLibraryWritePermission = await MediaLibrary.requestPermissionsAsync(true);
-        console.log('Media library write permission:', mediaLibraryWritePermission.status);
-        
-        // Force a small delay on Android to make sure permissions are registered
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      // Media library permissions
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      // Media library write permissions (needed for saving images)
+      await MediaLibrary.requestPermissionsAsync();
       
       // Mark permissions as requested so we don't ask again
       await savePermissionsRequested(true);
-      
-      if (Platform.OS === 'android') {
-        // Double-check that permissions were actually granted on Android
-        const finalCameraStatus = (await ImagePicker.getCameraPermissionsAsync()).status;
-        const finalMediaLibraryStatus = (await ImagePicker.getMediaLibraryPermissionsAsync()).status;
-        const finalMediaLibraryWriteStatus = (await MediaLibrary.getPermissionsAsync()).status;
-        
-        console.log('Final permission status on Android:');
-        console.log(`- Camera: ${finalCameraStatus}`);
-        console.log(`- Media Library: ${finalMediaLibraryStatus}`);
-        console.log(`- Media Library Write: ${finalMediaLibraryWriteStatus}`);
-      }
     } catch (error) {
       console.error('Error initializing app:', error);
     }
@@ -158,6 +137,75 @@ export default function App() {
     loadStoredData();
   }, []);
 
+  // Load mock activity data
+  useEffect(() => {
+    // In a real app, this would fetch from an API
+    // For now, we'll use mock data
+    const mockActivities = [
+      {
+        id: '1',
+        type: 'join',
+        username: 'Liam',
+        timestamp: new Date().toISOString(),
+        timeDisplay: '10:30 AM',
+      },
+      {
+        id: '2',
+        type: 'upload',
+        username: 'Sophia',
+        timestamp: new Date().toISOString(),
+        timeDisplay: '11:15 AM',
+        photoCount: 3,
+      },
+      {
+        id: '3',
+        type: 'join',
+        username: 'Ethan',
+        timestamp: new Date().toISOString(),
+        timeDisplay: '12:00 PM',
+      },
+      {
+        id: '4',
+        type: 'upload',
+        username: 'Olivia',
+        timestamp: new Date().toISOString(),
+        timeDisplay: '12:45 PM',
+        photoCount: 2,
+      },
+      {
+        id: '5',
+        type: 'create',
+        username: 'Noah',
+        timestamp: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        timeDisplay: '9:00 AM',
+      },
+      {
+        id: '6',
+        type: 'join',
+        username: 'Ava',
+        timestamp: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        timeDisplay: '9:30 AM',
+      },
+      {
+        id: '7',
+        type: 'upload',
+        username: 'Lucas',
+        timestamp: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        timeDisplay: '10:00 AM',
+        photoCount: 5,
+      },
+      {
+        id: '8',
+        type: 'join',
+        username: 'Isabella',
+        timestamp: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        timeDisplay: '11:00 AM',
+      },
+    ];
+    
+    setActivities(mockActivities);
+  }, []);
+
   const handleUserCreated = async (name: string) => {
     try {
       // First check if user exists
@@ -204,6 +252,7 @@ export default function App() {
     
     // Always clear current room and go back to room list
     setCurrentRoom(null);
+    setCurrentTab('home'); // Ensure we're on the home tab
     await clearCurrentRoom();
   };
 
@@ -220,11 +269,37 @@ export default function App() {
     }
   };
 
+  // Handle navigation between tabs
+  const handleNavigateToTab = (tab: string) => {
+    setCurrentTab(tab);
+    
+    if (tab === 'profile') {
+      setShowProfile(true);
+      setShowActivity(false);
+    } else if (tab === 'notifications') {
+      setShowActivity(true);
+      setShowProfile(false);
+    } else if (tab === 'home') {
+      setShowProfile(false);
+      setShowActivity(false);
+    }
+  };
+
+  // Handle back navigation from profile
+  const handleBackFromProfile = () => {
+    setShowProfile(false);
+  };
+
+  // Handle back navigation from activity
+  const handleBackFromActivity = () => {
+    setShowActivity(false);
+  };
+
   // Show loading indicator while checking for stored user data
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#0070f3" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -250,12 +325,33 @@ export default function App() {
       );
     }
 
+    if (showProfile) {
+      return (
+        <ProfileScreen 
+          user={user}
+          onBack={handleBackFromProfile}
+          onLogout={handleLogout}
+          onNavigateToTab={handleNavigateToTab}
+        />
+      );
+    }
+
+    if (showActivity) {
+      return (
+        <ActivityScreen 
+          onBack={handleBackFromActivity}
+          activities={activities}
+        />
+      );
+    }
+
     return (
       <RoomListScreen 
         user={user}
         onSelectRoom={handleRoomJoined}
         onCreateRoom={() => {}} // Empty function since we handle creation in RoomListScreen
         onLogout={handleLogout}
+        onNavigateToTab={handleNavigateToTab}
       />
     );
   };

@@ -22,6 +22,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { 
   Room, 
   RoomImage, 
@@ -324,6 +325,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   };
 
   const handlePickImage = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const permissionsRequested = await getPermissionsRequested();
       
@@ -357,6 +359,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   };
 
   const handleTakePhoto = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const permissionsRequested = await getPermissionsRequested();
       
@@ -655,17 +658,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
           showToast('Image saved to your device', 'success');
         } else {
           if (Platform.OS === 'android' && result.permissionDenied) {
-            Alert.alert(
-              'Permission Required', 
-              'To save images, please enable media access in your device settings.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Open Settings', 
-                  onPress: openAndroidSettings
-                }
-              ]
-            );
+            showToast('Permission denied to save image', 'error');
           } else {
             showToast('Failed to save image to your device', 'error');
           }
@@ -723,17 +716,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
           }
         } else {
           if (Platform.OS === 'android' && result.permissionDenied) {
-            Alert.alert(
-              'Permission Required', 
-              'To save images, please enable media access in your device settings.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Open Settings', 
-                  onPress: openAndroidSettings
-                }
-              ]
-            );
+            showToast('Permission denied to save images', 'error');
           } else {
               showToast('Failed to save images to your device', 'error');
           }
@@ -995,6 +978,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   };
 
   const copyRoomCode = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Clipboard.setString(room.id);
     showToast('Room code copied to clipboard', 'success');
   };
@@ -1012,21 +996,27 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
         onPress={() => setShowActionModal(false)}
       >
         <View style={styles.modalContent}>
-          <LinearGradient
-            colors={['#FFFFFF', '#F8FAFC', '#F1F5F9']}
-            style={styles.modalGradientContainer}
-          >
-          <Text style={styles.modalTitle}>Actions</Text>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHandleBar} />
+            <Text style={styles.modalTitle}>Actions</Text>
+          </View>
           
-          <ScrollView>
+          <ScrollView 
+            style={styles.actionList}
+            contentContainerStyle={styles.actionListContent}
+            showsVerticalScrollIndicator={false}
+          >
             <TouchableOpacity 
               style={styles.actionItem}
               onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setShowActionModal(false);
                 setShowFaceCapture(true);
               }}
             >
-                <Ionicons name="person-circle-outline" size={26} color="#8B5CF6" />
+              <View style={[styles.actionIconContainer, { backgroundColor: `${COLORS.accent}20` }]}>
+                <Ionicons name="person-circle-outline" size={22} color={COLORS.accent} />
+              </View>
               <Text style={styles.actionText}>Find My Photos</Text>
             </TouchableOpacity>
             
@@ -1037,15 +1027,18 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
                 <TouchableOpacity 
                   style={styles.actionItem}
                   onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowActionModal(false);
                     toggleSelectionMode();
                   }}
                 >
-                  <Ionicons 
+                  <View style={[styles.actionIconContainer, { backgroundColor: `${COLORS.secondary}20` }]}>
+                    <Ionicons 
                       name={selectionMode ? "checkmark-circle-outline" : "albums-outline"} 
-                      size={26} 
-                      color="#F59E0B" 
-                  />
+                      size={22} 
+                      color={COLORS.secondary} 
+                    />
+                  </View>
                   <Text style={styles.actionText}>
                     {selectionMode ? "Cancel Selection" : "Select Images"}
                   </Text>
@@ -1055,35 +1048,40 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
                   <TouchableOpacity 
                     style={styles.actionItem}
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowActionModal(false);
                       handleDownloadSelectedImages();
                     }}
                   >
-                      <Ionicons name="cloud-download-outline" size={26} color="#3B82F6" />
+                    <View style={[styles.actionIconContainer, { backgroundColor: `${COLORS.primary}20` }]}>
+                      <Ionicons name="cloud-download-outline" size={22} color={COLORS.primary} />
+                    </View>
                     <Text style={styles.actionText}>
                       {selectedImages.size > 0 
                         ? `Download ${selectedImages.size} Selected Images` 
-                          : "Download All Images (Except Yours)"}
+                        : "Download All Images (Except Yours)"}
                     </Text>
                   </TouchableOpacity>
                 )}
                 
                 {isRoomCreator && (
                   <TouchableOpacity 
-                    style={styles.actionItem}
+                    style={[styles.actionItem, { marginBottom: 0 }]}
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setShowActionModal(false);
                       handleDeleteAllImages();
                     }}
                   >
-                      <Ionicons name="trash-bin-outline" size={26} color="#EF4444" />
+                    <View style={[styles.actionIconContainer, { backgroundColor: '#FEE2E2' }]}>
+                      <Ionicons name="trash-bin-outline" size={22} color="#EF4444" />
+                    </View>
                     <Text style={styles.actionText}>Delete All Images</Text>
                   </TouchableOpacity>
                 )}
               </>
             )}
           </ScrollView>
-          </LinearGradient>
         </View>
       </TouchableOpacity>
     </Modal>
@@ -1098,8 +1096,10 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
           activeOpacity={0.9}
           onPress={() => {
             if (selectionMode) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               toggleImageSelection(item.id || '');
             } else {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               console.log(`Opening preview for image at index ${index}:`, item.image_url);
               
               // Just set the index and show the preview
@@ -1109,6 +1109,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
           }}
           onLongPress={() => {
             if (!selectionMode) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               toggleSelectionMode();
               toggleImageSelection(item.id || '');
             }
@@ -1157,6 +1158,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   };
 
   const handleBackToRoomList = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onExit(false);
   };
 
@@ -1233,168 +1235,141 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Header with blue background */}
       <LinearGradient
-        colors={['#6366F1', '#8B5CF6']}
+        colors={[COLORS.primary, COLORS.secondary]}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
-        <View style={styles.headerContent}>
-          <View style={styles.headerRow}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={handleBackToRoomList}
-        >
-              <Ionicons name="chevron-back" size={24} color="white" />
-        </TouchableOpacity>
-        
+        <SafeAreaView style={{ backgroundColor: 'transparent' }}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={handleBackToRoomList}
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+            
             <View style={styles.roomInfoContainer}>
-              <TouchableOpacity 
-                style={styles.roomInfo}
-                onPress={copyRoomCode}
-                activeOpacity={0.7}
-              >
-          <Text style={styles.roomName}>{room.name}</Text>
-                <View style={styles.roomCodeContainer}>
-          <Text style={styles.roomCode}>Code: {room.id}</Text>
+              <Text style={styles.roomName}>{room.name}</Text>
+              <View style={styles.roomInfoRow}>
+                <TouchableOpacity 
+                  style={styles.codeContainer}
+                  onPress={copyRoomCode}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.roomCode}>Code: {room.id}</Text>
                   <Ionicons name="copy-outline" size={12} color="rgba(255,255,255,0.7)" style={styles.copyIcon} />
-                </View>
-              </TouchableOpacity>
-              
-              {/* Participants circles */}
-              <View style={styles.participantsContainer}>
-                {roomParticipants.slice(0, 5).map((participant, index) => (
-                  <View 
-                    key={participant} 
-                    style={[
-                      styles.participantCircle,
-                      { marginLeft: index > 0 ? -10 : 0 }
-                    ]}
-                  >
-                    <Text style={styles.participantInitial}>
-                      {participant.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                ))}
-                {roomParticipants.length > 5 && (
-                  <View style={[styles.participantCircle, styles.moreParticipants]}>
-                    <Text style={styles.participantInitial}>
-                      +{roomParticipants.length - 5}
-                    </Text>
+                </TouchableOpacity>
+                
+                {expiryTimeRemaining && (
+                  <View style={styles.expiryContainer}>
+                    <Ionicons name="time-outline" size={12} color={COLORS.white} style={styles.expiryIcon} />
+                    <Text style={styles.expiryText}>{expiryTimeRemaining}</Text>
                   </View>
                 )}
-                
-                <TouchableOpacity 
-                  style={styles.showParticipantsButton}
-                  onPress={() => setShowParticipantsModal(true)}
-                >
-                  <Ionicons name="information-circle-outline" size={16} color="white" />
-                </TouchableOpacity>
-              </View>
-        </View>
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => setShowActionModal(true)}
-        >
-              <Ionicons name="ellipsis-vertical" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-        </View>
-      </LinearGradient>
-      
-      {/* Display expiry time as a badge below the header */}
-      {expiryTimeRemaining && (
-        <View style={styles.expiryBadge}>
-          <Ionicons name="time-outline" size={12} color="#6366F1" style={styles.expiryIcon} />
-          <Text style={styles.expiryBadgeText}>{expiryTimeRemaining}</Text>
-        </View>
-      )}
-      
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading images...</Text>
-        </View>
-      ) : (
-        <>
-          {images.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.emptyTitle}>No images yet</Text>
-              <Text style={styles.emptyDescription}>Share the first image in this room</Text>
-              
-              <View style={styles.emptyButtons}>
-                <TouchableOpacity 
-                  style={[styles.emptyButton, { backgroundColor: '#3B82F6' }]}
-                  onPress={handlePickImage}
-                >
-                  <Ionicons name="images-outline" size={28} color="#fff" />
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.emptyButton, { backgroundColor: '#10B981' }]}
-                  onPress={handleTakePhoto}
-                >
-                  <Ionicons name="camera-outline" size={28} color="#fff" />
-                </TouchableOpacity>
               </View>
             </View>
-          ) : (
-            <FlatList
-              data={images}
-              renderItem={renderImage}
-              keyExtractor={item => item.id || ''}
-              numColumns={4}
-              contentContainerStyle={[
-                { paddingBottom: 100, paddingHorizontal: 8 }
-              ]}
-              columnWrapperStyle={styles.imageRow}
-              showsVerticalScrollIndicator={true}
-              initialNumToRender={12}
-              maxToRenderPerBatch={16}
-              windowSize={11}
-              removeClippedSubviews={true}
-              ListHeaderComponent={
-                <View style={styles.hintContainer}>
-                  <Text style={styles.hintText}>Tap to view image, long press to select multiple images</Text>
-                </View>
-              }
-            />
-          )}
-        </>
-      )}
+            
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowActionModal(true);
+              }}
+            >
+              <Ionicons name="ellipsis-vertical" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
       
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading images...</Text>
+          </View>
+        ) : (
+          <>
+            {images.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="images-outline" size={64} color="#CBD5E1" />
+                <Text style={styles.emptyTitle}>No images yet</Text>
+                <Text style={styles.emptyDescription}>Share the first image in this room</Text>
+                
+                <View style={styles.emptyButtons}>
+                  <TouchableOpacity 
+                    style={[styles.emptyButton, { backgroundColor: COLORS.primary }]}
+                    onPress={handlePickImage}
+                  >
+                    <Ionicons name="images-outline" size={28} color="#fff" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.emptyButton, { backgroundColor: COLORS.secondary }]}
+                    onPress={handleTakePhoto}
+                  >
+                    <Ionicons name="camera-outline" size={28} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <FlatList
+                data={images}
+                renderItem={renderImage}
+                keyExtractor={item => item.id || ''}
+                numColumns={2}
+                contentContainerStyle={styles.imageListContainer}
+                columnWrapperStyle={styles.imageRow}
+                showsVerticalScrollIndicator={false}
+                initialNumToRender={8}
+                maxToRenderPerBatch={12}
+                windowSize={11}
+                removeClippedSubviews={true}
+              />
+            )}
+          </>
+        )}
+      </SafeAreaView>
+      
+      {/* Floating action button */}
       {images.length > 0 && !loading && !uploading && !deleting && !downloadingAll && !selectionMode && (
-        <View style={styles.floatingButtons}>
-          <TouchableOpacity 
-            style={styles.floatingButton}
-            onPress={handleTakePhoto}
+        <TouchableOpacity 
+          style={styles.fabButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            Alert.alert(
+              'Add Photo',
+              'Choose how you want to add photos',
+              [
+                {
+                  text: 'Take Photo',
+                  onPress: handleTakePhoto
+                },
+                {
+                  text: 'Choose from Library',
+                  onPress: handlePickImage
+                },
+                {
+                  text: 'Cancel',
+                  style: 'cancel'
+                }
+              ]
+            );
+          }}
+        >
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.secondary]}
+            style={styles.fabGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <LinearGradient
-              colors={['#10B981', '#059669']}
-              style={styles.floatingButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-          >
-              <Ionicons name="camera" size={28} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.floatingButton}
-            onPress={handlePickImage}
-          >
-            <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
-              style={styles.floatingButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-          >
-              <Ionicons name="images" size={28} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+            <Ionicons name="add" size={30} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
       )}
       
       {uploading && (
@@ -1407,18 +1382,18 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
                 : 'Uploading image...'}
             </Text>
           </View>
-            <View style={styles.progressBarContainer}>
+          <View style={styles.progressBarContainer}>
             <Animated.View 
-                style={[
+              style={[
                 styles.progressBarBackground,
                 { width: progressAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['0%', '100%']
                 }) }
-                ]} 
+              ]} 
             >
               <LinearGradient
-                colors={['#3B82F6', '#6366F1', '#8B5CF6', '#A855F7']}
+                colors={[COLORS.primary, COLORS.secondary, COLORS.accent]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.progressBarGradient}
@@ -1429,109 +1404,6 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
         </View>
       )}
       
-      {deleting && (
-        <View style={styles.overlayContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <ActivityIndicator size="small" color="#EF4444" style={{ marginRight: 10 }} />
-            <Text style={[styles.deleteText, { color: '#fff', fontSize: 14 }]}>
-              Deleting images...
-            </Text>
-          </View>
-            <View style={styles.progressBarContainer}>
-            <Animated.View 
-                style={[
-                styles.progressBarBackground, 
-                { width: progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%']
-                }) }
-                ]} 
-            >
-              <LinearGradient
-                colors={['#EF4444', '#E11D48', '#BE123C', '#9F1239']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.progressBarGradient}
-              />
-              {renderDroplets()}
-            </Animated.View>
-          </View>
-        </View>
-      )}
-      
-      {downloadingAll && (
-        <View style={styles.overlayContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <ActivityIndicator size="small" color="#10B981" style={{ marginRight: 10 }} />
-            <Text style={[styles.downloadText, { color: '#fff', fontSize: 14 }]}>
-              Saving images...
-            </Text>
-          </View>
-            <View style={styles.progressBarContainer}>
-              <View 
-                style={[
-                styles.progressBarBackground, 
-                  { width: `${downloadProgress * 100}%` }
-                ]} 
-            >
-              <LinearGradient
-                colors={['#10B981', '#059669', '#047857']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.progressBarGradient}
-              />
-            </View>
-          </View>
-        </View>
-      )}
-      
-      {selectionMode && (
-        <View style={styles.selectionControls}>
-          <TouchableOpacity 
-            style={styles.selectionButton} 
-            onPress={toggleSelectionMode}
-          >
-            <Text style={styles.selectionButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.selectionCount}>
-            {selectedImages.size} selected
-          </Text>
-          
-          <View style={styles.selectionActions}>
-            {selectedImages.size > 0 ? (
-              <>
-                <TouchableOpacity 
-                  style={styles.selectionAction}
-                  onPress={handleDownloadSelectedImages}
-                >
-                  <Ionicons name="download-outline" size={24} color="#3B82F6" />
-                </TouchableOpacity>
-                
-                {(isRoomCreator || images.filter(img => selectedImages.has(img.id || '') && img.uploaded_by === userName).length === selectedImages.size) && (
-                  <TouchableOpacity 
-                    style={styles.selectionAction}
-                    onPress={handleDeleteSelectedImages}
-                  >
-                    <Ionicons name="trash-outline" size={24} color="#EF4444" />
-                  </TouchableOpacity>
-                )}
-              </>
-            ) : (
-              <>
-                <TouchableOpacity 
-                  style={styles.selectionAction}
-                  onPress={handleDownloadSelectedImages}
-                >
-                  <Ionicons name="download-outline" size={24} color="#3B82F6" />
-                  <Text style={styles.selectionActionText}>Download All</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      )}
-
       {renderActionModal()}
       
       <FaceCapture
@@ -1545,8 +1417,16 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
         visible={showMatchedPhotos}
         onClose={() => setShowMatchedPhotos(false)}
         photos={matchedPhotos}
-        onImagePress={(url) => {
-          handleDownloadImage(url);
+        onImagePress={async (url) => {
+          // Download without showing permission prompt
+          const result = await downloadImage(url);
+          if (result.success) {
+            showToast('Image saved to your device', 'success');
+          } else if (result.permissionDenied) {
+            showToast('Permission denied to save image', 'error');
+          } else {
+            showToast('Failed to save image', 'error');
+          }
         }}
       />
       
@@ -1603,7 +1483,10 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
               
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setShowParticipantsModal(false)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowParticipantsModal(false);
+                }}
               >
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
@@ -1611,6 +1494,66 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
           </View>
         </TouchableOpacity>
       </Modal>
+      
+      {/* Selection mode controls */}
+      {selectionMode && (
+        <View style={styles.selectionControls}>
+          <TouchableOpacity 
+            style={styles.selectionButton} 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              toggleSelectionMode();
+            }}
+          >
+            <Text style={styles.selectionButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.selectionCount}>
+            {selectedImages.size} selected
+          </Text>
+          
+          <View style={styles.selectionActions}>
+            {selectedImages.size > 0 ? (
+              <>
+                <TouchableOpacity 
+                  style={styles.selectionAction}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    handleDownloadSelectedImages();
+                  }}
+                >
+                  <Ionicons name="download-outline" size={24} color={COLORS.accent} />
+                </TouchableOpacity>
+                
+                {(isRoomCreator || images.filter(img => selectedImages.has(img.id || '') && img.uploaded_by === userName).length === selectedImages.size) && (
+                  <TouchableOpacity 
+                    style={styles.selectionAction}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      handleDeleteSelectedImages();
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={24} color="#EF4444" />
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.selectionAction}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    handleDownloadSelectedImages();
+                  }}
+                >
+                  <Ionicons name="download-outline" size={24} color={COLORS.accent} />
+                  <Text style={styles.selectionActionText}>Download All</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      )}
       
       {/* Custom Toast for iOS */}
       {Platform.OS === 'ios' && toastVisible && (
@@ -1655,64 +1598,132 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, userName, userId,
   );
 };
 
+// Define app colors - based on deep navy blue #1A2C50
+const COLORS = {
+  primary: '#1A2C50', // Deep navy blue
+  secondary: '#4A6FA5', // Medium blue
+  accent: '#6B98D4', // Light blue
+  highlight: '#F0B429', // Gold accent
+  lightBg: '#E6EBF5', // Light background
+  white: '#FFFFFF',
+  black: '#000000',
+  gray: '#6B7280',
+  lightGray: '#E5E7EB',
+  border: '#D1D5DB',
+  background: '#F9FAFB',
+  text: '#1F2937', // Dark text color
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.white,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 48 : 32,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    width: '100%',
+    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
   },
   headerContent: {
-    marginTop: 8,
-  },
-  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 16,
   },
   backButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   actionButton: {
     padding: 8,
-  },
-  roomInfoContainer: {
-    flex: 1,
-    marginHorizontal: 8,
-  },
-  roomInfo: {
-    width: '100%',
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   roomName: {
     fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: 'white',
-    letterSpacing: 0.3,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  roomCodeContainer: {
+  roomInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    justifyContent: 'center',
+  },
+  codeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
   },
   roomCode: {
     fontSize: 13,
-    fontFamily: 'Poppins-SemiBold',
     color: 'rgba(255,255,255,0.9)',
   },
   copyIcon: {
     marginLeft: 4,
   },
-  expiryTime: {
-    fontSize: 10,
-    fontFamily: 'Poppins-Medium',
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
-    textAlign: 'center',
+  expiryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  expiryIcon: {
+    marginRight: 4,
+  },
+  expiryText: {
+    fontSize: 11,
+    color: COLORS.white,
+  },
+  imageListContainer: {
+    padding: 12,
+    paddingBottom: 100,
+  },
+  imageContainer: {
+    width: '48%',
+    aspectRatio: 1,
+    margin: '1%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: COLORS.lightBg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  imageRow: {
+    justifyContent: 'space-between',
+  },
+  fabButton: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 100,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -1722,8 +1733,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748B',
+    color: COLORS.gray,
   },
   emptyContainer: {
     flex: 1,
@@ -1733,14 +1743,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1E293B',
+    fontWeight: '600',
+    color: COLORS.text,
     marginTop: 24,
   },
   emptyDescription: {
     fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748B',
+    color: COLORS.gray,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -1761,81 +1770,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  hintContainer: {
-    paddingVertical: 12,
-  },
-  hintText: {
-    textAlign: 'center',
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748B',
-    fontStyle: 'italic',
-  },
-  imageContainer: {
-    width: '25%', // Exactly 25% for 4 columns
-    aspectRatio: 1,
-    padding: 2,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#F1F5F9',
-  },
-  imageRow: {
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
-  uploaderOverlay: {
+  selectionIndicator: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  uploaderText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Poppins-Medium',
-  },
-  selectionControls: {
-    flexDirection: 'row',
+    top: 12,
+    right: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    justifyContent: 'center',
   },
-  selectionButton: {
-    padding: 8,
-  },
-  selectionButtonText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-    color: '#64748B',
-  },
-  selectionCount: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1E293B',
-  },
-  selectionActions: {
-    flexDirection: 'row',
-  },
-  selectionAction: {
-    padding: 8,
-    marginLeft: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  selectionActionText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-    color: '#3B82F6',
-    marginLeft: 4,
+  selectedIndicator: {
+    backgroundColor: COLORS.accent,
   },
   modalOverlay: {
     flex: 1,
@@ -1846,21 +1795,77 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    paddingBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
   },
-  modalGradientContainer: {
-    padding: 16,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
+  modalHeader: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: 'white',
+  },
+  modalHandleBar: {
+    width: 36,
+    height: 5,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 3,
+    marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#1E293B',
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  actionList: {
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+  },
+  actionListContent: {
+    paddingTop: 12,
+    paddingBottom: 0,
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: {
+    fontSize: 16,
+    color: COLORS.text,
+    marginLeft: 16,
+    fontWeight: '500',
+  },
+  actionDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 8,
+  },
+  closeModalButton: {
+    marginTop: 8,
+    marginHorizontal: 20,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  closeModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
   overlayContainer: {
     position: 'absolute',
@@ -1881,7 +1886,6 @@ const styles = StyleSheet.create({
   uploadText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Poppins-Regular',
     color: '#1E293B',
   },
   progressBarContainer: {
@@ -1912,150 +1916,53 @@ const styles = StyleSheet.create({
   deleteText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Poppins-Regular',
     color: '#1E293B',
   },
   downloadText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Poppins-Regular',
     color: '#1E293B',
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Medium',
-    color: '#1E293B',
-    marginLeft: 16,
-    letterSpacing: 0.2,
-  },
-  actionDivider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 12,
-  },
-  modalCancelItem: {
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    marginTop: 8,
-    justifyContent: 'center',
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#64748B',
-    fontFamily: 'Poppins-Medium',
-    textAlign: 'center',
   },
   uploadingSubtext: {
     marginTop: 8,
     fontSize: 14,
-    fontFamily: 'Poppins-Regular',
     color: '#64748B',
   },
-  selectionIndicator: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectedIndicator: {
-    backgroundColor: '#3B82F6',
-  },
-  expiryBadge: {
-    alignSelf: 'center',
+  selectionControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(240, 240, 255, 0.95)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
-  expiryIcon: {
-    marginRight: 4,
+  selectionButton: {
+    padding: 8,
   },
-  expiryBadgeText: {
-    fontSize: 11,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#6366F1',
+  selectionButtonText: {
+    fontSize: 14,
+    color: '#64748B',
   },
-  floatingButtons: {
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
+  selectionCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  selectionActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
   },
-  floatingButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  floatingButtonGradient: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  participantsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  participantCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'white',
-  },
-  participantInitial: {
-    fontSize: 11,
-    fontFamily: 'Poppins-Bold',
-    color: 'white',
-  },
-  moreParticipants: {
-    backgroundColor: 'rgba(59, 130, 246, 0.8)',
-    marginLeft: -10,
-  },
-  showParticipantsButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  selectionAction: {
+    padding: 8,
     marginLeft: 8,
-    borderWidth: 1.5,
-    borderColor: 'white',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectionActionText: {
+    fontSize: 14,
+    color: '#3B82F6',
+    marginLeft: 4,
   },
   participantsModalContent: {
     backgroundColor: 'white',
@@ -2070,7 +1977,7 @@ const styles = StyleSheet.create({
   },
   participantsModalTitle: {
     fontSize: 20,
-    fontFamily: 'Poppins-SemiBold',
+    fontWeight: '600',
     color: '#1E293B',
     marginBottom: 16,
     marginTop: 20,
@@ -2088,6 +1995,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
   },
+  participantCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'white',
+  },
+  participantInitial: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  moreParticipants: {
+    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+    marginLeft: -10,
+  },
+  showParticipantsButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    borderWidth: 1.5,
+    borderColor: 'white',
+  },
   participantCircleLarge: {
     width: 40,
     height: 40,
@@ -2097,12 +2034,11 @@ const styles = StyleSheet.create({
   },
   participantInitialLarge: {
     fontSize: 18,
-    fontFamily: 'Poppins-Bold',
+    fontWeight: 'bold',
     color: '#8B5CF6',
   },
   participantName: {
     fontSize: 16,
-    fontFamily: 'Poppins-Medium',
     color: '#1E293B',
     marginLeft: 12,
     flex: 1,
@@ -2115,7 +2051,7 @@ const styles = StyleSheet.create({
   },
   creatorBadgeText: {
     fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
+    fontWeight: '600',
     color: '#8B5CF6',
   },
   closeButton: {
@@ -2129,7 +2065,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontWeight: '600',
     color: 'white',
   },
   customToast: {
@@ -2154,7 +2090,6 @@ const styles = StyleSheet.create({
   toastText: {
     color: 'white',
     fontSize: 15,
-    fontFamily: 'Poppins-Medium',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 1 },
@@ -2162,6 +2097,11 @@ const styles = StyleSheet.create({
   },
   toastIcon: {
     marginRight: 10,
+  },
+  roomInfoContainer: {
+    flex: 1,
+    marginHorizontal: 12,
+    alignItems: 'center',
   },
 });
 
